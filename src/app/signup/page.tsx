@@ -82,10 +82,16 @@ export default function SignupPage() {
 
                 if (tenantUserError) throw tenantUserError
 
-                // Success! Redirect to onboarding
+                // Step 5: Create default stock location
+                await supabase.from('stock_locations').insert({
+                    tenant_id: tenant.id,
+                    location_name: 'Main Store',
+                })
+
+                // Success! Redirect to dashboard
                 setStep(4)
                 setTimeout(() => {
-                    router.push('/onboarding')
+                    router.push(`/${slug}/dashboard`)
                 }, 2000)
             }
         } catch (err: any) {

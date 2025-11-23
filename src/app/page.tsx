@@ -19,8 +19,8 @@ export default async function Home() {
       // User has a tenant, redirect to their dashboard
       redirect(`/${(profile.tenants as any).slug}/dashboard`)
     } else {
-      // User doesn't have a tenant yet - redirect to onboarding
-      redirect('/onboarding')
+      // User doesn't have a tenant - redirect to signup
+      redirect('/signup')
     }
   }
 
