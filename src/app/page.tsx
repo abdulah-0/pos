@@ -16,10 +16,17 @@ export default async function Home() {
       .single()
 
     if (profile?.current_tenant_id && profile.tenants) {
+      // User has a tenant, redirect to their dashboard
       redirect(`/${(profile.tenants as any).slug}/dashboard`)
+    } else {
+      // User doesn't have a tenant - this shouldn't happen with our signup flow
+      // Sign them out and redirect to signup
+      await supabase.auth.signOut()
+      redirect('/signup')
     }
   }
 
   // If not logged in, redirect to marketing landing page
   redirect('/home')
 }
+
