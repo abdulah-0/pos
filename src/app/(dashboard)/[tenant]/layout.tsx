@@ -5,11 +5,12 @@ import { Header } from '@/components/layout/Header'
 
 interface TenantLayoutProps {
     children: React.ReactNode
-    params: { tenant: string }
+    params: Promise<{ tenant: string }>
 }
 
 export default async function TenantLayout({ children, params }: TenantLayoutProps) {
     const supabase = await createClient()
+    const { tenant: tenantSlug } = await params
 
     const {
         data: { user },
@@ -23,7 +24,7 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
     const { data: tenant } = await supabase
         .from('tenants')
         .select('*')
-        .eq('slug', params.tenant)
+        .eq('slug', tenantSlug)
         .single()
 
     if (!tenant) {
@@ -44,7 +45,7 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
 
     return (
         <div className="flex h-screen overflow-hidden">
-            <Sidebar tenantSlug={params.tenant} />
+            <Sidebar tenantSlug={tenantSlug} />
             <div className="flex flex-1 flex-col overflow-hidden">
                 <Header user={user} tenant={tenant} />
                 <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
