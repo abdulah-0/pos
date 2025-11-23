@@ -85,7 +85,7 @@ export default function SignupPage() {
                 // Success! Redirect to onboarding
                 setStep(4)
                 setTimeout(() => {
-                    router.push(`/${slug}/dashboard`)
+                    router.push('/onboarding')
                 }, 2000)
             }
         } catch (err: any) {
@@ -116,8 +116,8 @@ export default function SignupPage() {
                             <div key={s} className="flex items-center">
                                 <div
                                     className={`flex h-10 w-10 items-center justify-center rounded-full ${step >= s
-                                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                                            : 'bg-gray-200 text-gray-600'
+                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                                        : 'bg-gray-200 text-gray-600'
                                         }`}
                                 >
                                     {step > s ? <Check className="h-5 w-5" /> : s}
