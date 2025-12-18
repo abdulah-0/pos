@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'next/navigation'
 import { useCartStore } from '@/store/cartStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,9 +17,29 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { Search, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react'
+import ItemSearchDialog from '@/components/features/sales/ItemSearchDialog'
+import PaymentDialog from '@/components/features/sales/PaymentDialog'
+import CustomerSelectDialog from '@/components/features/sales/CustomerSelectDialog'
+import { getTenantBySlug, getEmployeeId } from '@/lib/tenantUtils'
+import { completeSale } from '@/lib/services/salesService'
+import { printReceipt } from '@/lib/receiptUtils'
+import { CartItem, Payment } from '@/types'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/toast'
 
 export default function SalesPage() {
+    const params = useParams()
+    const tenantSlug = params.tenant as string
+    const [tenantId, setTenantId] = useState<string>('')
+    const [employeeId, setEmployeeId] = useState<number>(0)
     const [searchQuery, setSearchQuery] = useState('')
+    const [showSearchDialog, setShowSearchDialog] = useState(false)
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+    const [showCustomerDialog, setShowCustomerDialog] = useState(false)
+    const [processing, setProcessing] = useState(false)
+    const searchInputRef = useRef<HTMLInputElement>(null)
+    const { showToast } = useToast()
+
     const {
         items,
         customer,
@@ -32,10 +53,79 @@ export default function SalesPage() {
         clearCart,
     } = useCartStore()
 
-    // Mock function - will be replaced with actual Supabase query
-    const handleSearch = async (query: string) => {
-        // TODO: Search items from Supabase with tenant filter
-        console.log('Searching for:', query)
+    // Load tenant ID and employee ID from slug
+    useEffect(() => {
+        async function loadTenantAndEmployee() {
+            const tenant = await getTenantBySlug(tenantSlug)
+            if (tenant) {
+                setTenantId(tenant.id)
+
+                // Get current user and employee ID
+                const supabase = createClient()
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                    const empId = await getEmployeeId(user.id, tenant.id)
+                    if (empId) {
+                        setEmployeeId(empId)
+                    }
+                }
+            }
+        }
+        loadTenantAndEmployee()
+    }, [tenantSlug])
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // F2 - Focus search
+            if (e.key === 'F2') {
+                e.preventDefault()
+                searchInputRef.current?.focus()
+            }
+            // F4 - Add customer
+            if (e.key === 'F4') {
+                e.preventDefault()
+                setShowCustomerDialog(true)
+            }
+            // F12 - Complete sale
+            if (e.key === 'F12' && items.length > 0) {
+                e.preventDefault()
+                setShowPaymentDialog(true)
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [items.length])
+
+    const handleSearch = () => {
+        if (searchQuery.trim()) {
+            setShowSearchDialog(true)
+        }
+    }
+
+    const handleSelectItem = (item: any) => {
+        // Convert database item to cart item
+        const cartItem: CartItem = {
+            item_id: item.id,
+            name: item.name,
+            item_number: item.item_number,
+            description: item.description,
+            price: item.unit_price,
+            cost_price: item.cost_price,
+            quantity: 1,
+            discount: 0,
+            discount_type: 'percent',
+            serialnumber: '',
+            is_serialized: item.is_serialized,
+            allow_alt_description: item.allow_alt_description,
+            item_location: item.item_quantities?.[0]?.location?.id || 1,
+            in_stock: item.stock_quantity || 0,
+            stock_name: item.location_name,
+        }
+
+        addItem(cartItem)
+        setSearchQuery('')
     }
 
     const handleAddSampleItem = () => {
@@ -58,6 +148,40 @@ export default function SalesPage() {
         })
     }
 
+    const handleCompletePayment = async (payments: Payment[]) => {
+        setProcessing(true)
+        try {
+            // Complete the sale
+            const cart = {
+                items,
+                customer: customer || undefined,
+                payments,
+                comment: '',
+                mode,
+            }
+
+            const sale = await completeSale(cart, tenantId, employeeId)
+
+            // Success! Clear cart and show success message
+            clearCart()
+            setShowPaymentDialog(false)
+
+            alert(`Sale completed successfully! Invoice #${sale.invoice_number}`)
+
+            // TODO: Generate and print receipt
+        } catch (error) {
+            console.error('Error completing sale:', error)
+            showToast('error', 'Error completing sale. Please try again.')
+        } finally {
+            setProcessing(false)
+        }
+    }
+
+    const handleSelectCustomer = (customer: any) => {
+        useCartStore.getState().setCustomer(customer)
+    }
+
+
     return (
         <div className="flex h-full gap-6">
             {/* Left Side - Product Search & Cart */}
@@ -73,17 +197,18 @@ export default function SalesPage() {
                     <CardContent>
                         <div className="flex gap-2">
                             <Input
+                                ref={searchInputRef}
                                 placeholder="Search by name, barcode, or item number..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        handleSearch(searchQuery)
+                                        handleSearch()
                                     }
                                 }}
                                 className="flex-1"
                             />
-                            <Button onClick={() => handleSearch(searchQuery)}>
+                            <Button onClick={handleSearch}>
                                 Search
                             </Button>
                             <Button variant="outline" onClick={handleAddSampleItem}>
@@ -93,6 +218,14 @@ export default function SalesPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Item Search Dialog */}
+                <ItemSearchDialog
+                    open={showSearchDialog}
+                    onOpenChange={setShowSearchDialog}
+                    onSelectItem={handleSelectItem}
+                    tenantId={tenantId}
+                />
 
                 {/* Cart Items */}
                 <Card>
@@ -201,7 +334,11 @@ export default function SalesPage() {
                                 )}
                             </div>
                         ) : (
-                            <Button variant="outline" className="w-full">
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setShowCustomerDialog(true)}
+                            >
                                 Add Customer
                             </Button>
                         )}
@@ -235,9 +372,10 @@ export default function SalesPage() {
                     <Button
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90"
                         size="lg"
-                        disabled={items.length === 0}
+                        disabled={items.length === 0 || processing}
+                        onClick={() => setShowPaymentDialog(true)}
                     >
-                        Complete Sale
+                        {processing ? 'Processing...' : 'Complete Sale'}
                     </Button>
                     <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" disabled={items.length === 0}>
@@ -252,6 +390,22 @@ export default function SalesPage() {
                         </Button>
                     </div>
                 </div>
+
+                {/* Payment Dialog */}
+                <PaymentDialog
+                    open={showPaymentDialog}
+                    onOpenChange={setShowPaymentDialog}
+                    total={getTotal()}
+                    onComplete={handleCompletePayment}
+                />
+
+                {/* Customer Select Dialog */}
+                <CustomerSelectDialog
+                    open={showCustomerDialog}
+                    onOpenChange={setShowCustomerDialog}
+                    onSelectCustomer={handleSelectCustomer}
+                    tenantId={tenantId}
+                />
             </div>
         </div>
     )

@@ -13,6 +13,9 @@ import {
     BarChart3,
     Settings,
     CreditCard,
+    MapPin,
+    Package2,
+    Award,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -27,7 +30,10 @@ export function Sidebar({ tenantSlug }: SidebarProps) {
         { name: 'Dashboard', href: `${baseUrl}/dashboard`, icon: LayoutDashboard },
         { name: 'POS Register', href: `${baseUrl}/sales`, icon: ShoppingCart },
         { name: 'Items', href: `${baseUrl}/items`, icon: Package },
+        { name: 'Receiving', href: `${baseUrl}/receiving`, icon: Package2 },
+        { name: 'Locations', href: `${baseUrl}/locations`, icon: MapPin },
         { name: 'Customers', href: `${baseUrl}/customers`, icon: Users },
+        { name: 'Loyalty', href: `${baseUrl}/loyalty`, icon: Award },
         { name: 'Suppliers', href: `${baseUrl}/suppliers`, icon: Truck },
         { name: 'Employees', href: `${baseUrl}/employees`, icon: UserCog },
         { name: 'Reports', href: `${baseUrl}/reports`, icon: BarChart3 },

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
+import { ToastProvider } from '@/components/ui/toast'
 
 interface TenantLayoutProps {
     children: React.ReactNode
@@ -44,12 +45,14 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
     }
 
     return (
-        <div className="flex h-screen overflow-hidden">
-            <Sidebar tenantSlug={tenantSlug} />
-            <div className="flex flex-1 flex-col overflow-hidden">
-                <Header user={user} tenant={tenant} />
-                <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
+        <ToastProvider>
+            <div className="flex h-screen overflow-hidden">
+                <Sidebar tenantSlug={tenantSlug} />
+                <div className="flex flex-1 flex-col overflow-hidden">
+                    <Header user={user} tenant={tenant} />
+                    <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
+                </div>
             </div>
-        </div>
+        </ToastProvider>
     )
 }
