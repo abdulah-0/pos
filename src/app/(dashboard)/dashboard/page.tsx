@@ -17,15 +17,16 @@ export default async function DashboardRedirect() {
         .from('employees')
         .select(`
             tenant_id,
-            tenant:tenants(slug)
+            tenant:tenants(id, name, slug)
         `)
         .eq('user_id', user.id)
         .eq('deleted', false)
         .single()
 
-    if (employee?.tenant_id && employee.tenant) {
-        // Redirect to tenant dashboard
-        redirect(`/${(employee.tenant as any).slug}/dashboard`)
+    if (employee?.tenant) {
+        const tenant = employee.tenant as any
+        // Redirect to their tenant dashboard
+        redirect(`/${tenant.slug}/dashboard`)
     }
 
     // If no employee record, redirect to signup
