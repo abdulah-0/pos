@@ -11,8 +11,6 @@ import {
     Truck,
     UserCog,
     BarChart3,
-    Settings,
-    CreditCard,
     MapPin,
     Package2,
     Award,
@@ -37,8 +35,6 @@ export function Sidebar({ tenantSlug }: SidebarProps) {
         { name: 'Suppliers', href: `${baseUrl}/suppliers`, icon: Truck },
         { name: 'Employees', href: `${baseUrl}/employees`, icon: UserCog },
         { name: 'Reports', href: `${baseUrl}/reports`, icon: BarChart3 },
-        { name: 'Gift Cards', href: `${baseUrl}/giftcards`, icon: CreditCard },
-        { name: 'Settings', href: `${baseUrl}/settings`, icon: Settings },
     ]
 
     return (
