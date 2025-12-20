@@ -27,9 +27,9 @@ export async function adjustStock(
     const supabase = createClient()
 
     try {
-        // Update item_quantities
+        // Update inventory
         const { data: currentQty } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .select('quantity')
             .eq('item_id', adjustment.itemId)
             .eq('location_id', adjustment.locationId)
@@ -38,7 +38,7 @@ export async function adjustStock(
         const newQuantity = (currentQty?.quantity || 0) + adjustment.quantity
 
         const { error: qtyError } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .upsert({
                 item_id: adjustment.itemId,
                 location_id: adjustment.locationId,
@@ -79,7 +79,7 @@ export async function transferStock(
     try {
         // Check source has enough stock
         const { data: sourceQty } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .select('quantity')
             .eq('item_id', transfer.itemId)
             .eq('location_id', transfer.fromLocationId)
@@ -91,7 +91,7 @@ export async function transferStock(
 
         // Decrease from source
         const { error: sourceError } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .update({
                 quantity: sourceQty.quantity - transfer.quantity,
             })
@@ -102,7 +102,7 @@ export async function transferStock(
 
         // Increase at destination
         const { data: destQty } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .select('quantity')
             .eq('item_id', transfer.itemId)
             .eq('location_id', transfer.toLocationId)
@@ -111,7 +111,7 @@ export async function transferStock(
         const newDestQty = (destQty?.quantity || 0) + transfer.quantity
 
         const { error: destError } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .upsert({
                 item_id: transfer.itemId,
                 location_id: transfer.toLocationId,
@@ -161,7 +161,7 @@ export async function getStockLevel(itemId: number, locationId: number): Promise
 
     try {
         const { data, error } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .select('quantity')
             .eq('item_id', itemId)
             .eq('location_id', locationId)
@@ -270,7 +270,7 @@ export async function deleteStockLocation(locationId: number): Promise<void> {
     try {
         // Check if location has stock
         const { data: hasStock } = await supabase
-            .from('item_quantities')
+            .from('inventory')
             .select('id')
             .eq('location_id', locationId)
             .gt('quantity', 0)

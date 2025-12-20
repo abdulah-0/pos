@@ -182,7 +182,7 @@ export async function getItems(tenantId: string, filters?: ItemFilters): Promise
             .select(`
                 *,
                 supplier:suppliers(*),
-                item_quantities(
+                inventory(
                     quantity,
                     location:stock_locations(*)
                 )
@@ -210,7 +210,7 @@ export async function getItems(tenantId: string, filters?: ItemFilters): Promise
 
         // Calculate total stock for each item
         const itemsWithStock = (data || []).map(item => {
-            const totalStock = item.item_quantities?.reduce((sum: number, q: any) => sum + q.quantity, 0) || 0
+            const totalStock = item.inventory?.reduce((sum: number, q: any) => sum + q.quantity, 0) || 0
             const isLowStock = totalStock <= (item.reorder_level || 0)
 
             return {
@@ -244,7 +244,7 @@ export async function getItemById(itemId: number): Promise<any> {
             .select(`
                 *,
                 supplier:suppliers(*),
-                item_quantities(
+                inventory(
                     quantity,
                     location:stock_locations(*)
                 )
@@ -255,7 +255,7 @@ export async function getItemById(itemId: number): Promise<any> {
         if (error) throw error
 
         // Calculate total stock
-        const totalStock = data.item_quantities?.reduce((sum: number, q: any) => sum + q.quantity, 0) || 0
+        const totalStock = data.inventory?.reduce((sum: number, q: any) => sum + q.quantity, 0) || 0
 
         return {
             ...data,

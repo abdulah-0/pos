@@ -70,7 +70,7 @@ export async function createReceiving(
         for (const item of receiving.items) {
             // Get current quantity
             const { data: currentQty } = await supabase
-                .from('item_quantities')
+                .from('inventory')
                 .select('quantity')
                 .eq('item_id', item.item_id)
                 .eq('location_id', item.item_location)
@@ -80,7 +80,7 @@ export async function createReceiving(
 
             // Update or insert quantity
             const { error: qtyError } = await supabase
-                .from('item_quantities')
+                .from('inventory')
                 .upsert({
                     item_id: item.item_id,
                     location_id: item.item_location,

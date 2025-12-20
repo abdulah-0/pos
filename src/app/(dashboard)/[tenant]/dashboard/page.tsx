@@ -91,7 +91,7 @@ export default async function TenantDashboardPage({ params }: DashboardPageProps
     const stats = [
         {
             title: "Today's Sales",
-            value: `$${todaysSales.toFixed(2)}`,
+            value: `Rs. ${todaysSales.toFixed(2)}`,
             description: salesData.data?.length ? `${salesData.data.length} transactions today` : 'No sales yet today',
             icon: DollarSign,
             color: 'text-green-600',
@@ -175,7 +175,7 @@ export default async function TenantDashboardPage({ params }: DashboardPageProps
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-bold text-green-600">${parseFloat(sale.sale_total).toFixed(2)}</p>
+                                            <p className="font-bold text-green-600">Rs. {parseFloat(sale.sale_total).toFixed(2)}</p>
                                         </div>
                                     </div>
                                 ))}

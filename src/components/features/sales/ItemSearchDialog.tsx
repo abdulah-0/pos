@@ -59,7 +59,7 @@ export default function ItemSearchDialog({
                 .from('items')
                 .select(`
                     *,
-                    item_quantities (
+                    inventory (
                         quantity,
                         location:stock_locations (
                             id,
@@ -76,7 +76,7 @@ export default function ItemSearchDialog({
 
             // Transform data to include stock info
             const itemsWithStock: ItemWithStock[] = (data || []).map((item: any) => {
-                const quantities = item.item_quantities || []
+                const quantities = item.inventory || []
                 const totalStock = quantities.reduce((sum: number, q: any) => sum + (q.quantity || 0), 0)
                 const mainLocation = quantities[0]
 
