@@ -32,15 +32,16 @@ export default async function TenantLayout({ children, params }: TenantLayoutPro
         redirect('/dashboard')
     }
 
-    // Check if user is a member of this tenant
-    const { data: membership } = await supabase
-        .from('tenant_users')
-        .select('*')
+    // Check if user is an employee of this tenant
+    const { data: employee } = await supabase
+        .from('employees')
+        .select('id, role_id')
         .eq('tenant_id', tenant.id)
         .eq('user_id', user.id)
+        .eq('deleted', false)
         .single()
 
-    if (!membership) {
+    if (!employee) {
         redirect('/dashboard')
     }
 
