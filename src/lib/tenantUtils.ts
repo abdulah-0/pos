@@ -11,15 +11,17 @@ export async function getCurrentTenant(): Promise<Tenant | null> {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return null
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('current_tenant_id, tenants(*)')
-            .eq('id', user.id)
+        // Get employee record with tenant info
+        const { data: employee } = await supabase
+            .from('employees')
+            .select('tenant_id, tenant:tenants(*)')
+            .eq('user_id', user.id)
+            .eq('deleted', false)
             .single()
 
-        if (!profile?.tenants) return null
+        if (!employee?.tenant) return null
 
-        return profile.tenants as unknown as Tenant
+        return employee.tenant as unknown as Tenant
     } catch (error) {
         console.error('Error getting current tenant:', error)
         return null
@@ -36,9 +38,9 @@ export async function getEmployeeId(userId: string, tenantId: string): Promise<n
         const { data: employee } = await supabase
             .from('employees')
             .select('id')
+            .eq('user_id', userId)
             .eq('tenant_id', tenantId)
             .eq('deleted', false)
-            .limit(1)
             .single()
 
         return employee?.id || null

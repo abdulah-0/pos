@@ -12,18 +12,22 @@ export default async function DashboardRedirect() {
         redirect('/login')
     }
 
-    // Get user's current tenant
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('current_tenant_id, tenants(slug)')
-        .eq('id', user.id)
+    // Get user's employee record to find their tenant
+    const { data: employee } = await supabase
+        .from('employees')
+        .select(`
+            tenant_id,
+            tenant:tenants(slug)
+        `)
+        .eq('user_id', user.id)
+        .eq('deleted', false)
         .single()
 
-    if (profile?.current_tenant_id && profile.tenants) {
+    if (employee?.tenant_id && employee.tenant) {
         // Redirect to tenant dashboard
-        redirect(`/${(profile.tenants as any).slug}/dashboard`)
+        redirect(`/${(employee.tenant as any).slug}/dashboard`)
     }
 
-    // If no tenant, redirect to signup
+    // If no employee record, redirect to signup
     redirect('/signup')
 }
