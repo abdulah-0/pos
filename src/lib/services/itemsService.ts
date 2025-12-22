@@ -115,7 +115,6 @@ export async function createItem(
                     item_id: data.id,
                     location_id: locationId,
                     quantity: initialStock,
-                    tenant_id: tenantId,
                 })
 
             if (invError) {
