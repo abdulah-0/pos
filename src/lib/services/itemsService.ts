@@ -179,10 +179,7 @@ export async function getItems(tenantId: string, filters?: ItemFilters): Promise
     try {
         let query = supabase
             .from('items')
-            .select(`
-                *,
-                supplier:suppliers(*)
-            `)
+            .select('*')
             .eq('tenant_id', tenantId)
             .eq('deleted', false)
             .order('name')
@@ -204,8 +201,20 @@ export async function getItems(tenantId: string, filters?: ItemFilters): Promise
 
         if (error) throw error
 
-        // Fetch inventory data separately for each item
+        // Fetch related data separately for each item
         const itemsWithStock = await Promise.all((data || []).map(async (item) => {
+            // Fetch supplier if exists
+            let supplier = null
+            if (item.supplier_id) {
+                const { data: supplierData } = await supabase
+                    .from('suppliers')
+                    .select('*, person:people(*)')
+                    .eq('id', item.supplier_id)
+                    .single()
+                supplier = supplierData
+            }
+
+            // Fetch inventory data
             const { data: inventoryData } = await supabase
                 .from('inventory')
                 .select('quantity, location_id, stock_locations(location_name)')
@@ -216,6 +225,7 @@ export async function getItems(tenantId: string, filters?: ItemFilters): Promise
 
             return {
                 ...item,
+                supplier,
                 inventory: inventoryData || [],
                 stock_quantity: totalStock,
                 is_low_stock: isLowStock,
@@ -243,14 +253,22 @@ export async function getItemById(itemId: number): Promise<any> {
     try {
         const { data, error } = await supabase
             .from('items')
-            .select(`
-                *,
-                supplier:suppliers(*)
-            `)
+            .select('*')
             .eq('id', itemId)
             .single()
 
         if (error) throw error
+
+        // Fetch supplier if exists
+        let supplier = null
+        if (data.supplier_id) {
+            const { data: supplierData } = await supabase
+                .from('suppliers')
+                .select('*, person:people(*)')
+                .eq('id', data.supplier_id)
+                .single()
+            supplier = supplierData
+        }
 
         // Fetch inventory data separately
         const { data: inventoryData } = await supabase
@@ -263,6 +281,7 @@ export async function getItemById(itemId: number): Promise<any> {
 
         return {
             ...data,
+            supplier,
             inventory: inventoryData || [],
             stock_quantity: totalStock,
             is_low_stock: totalStock <= (data.reorder_level || 0),
