@@ -115,14 +115,14 @@ export default function PaymentDialog({
                     <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-6 rounded-lg">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-lg text-gray-600 dark:text-gray-400">Total Due</span>
-                            <span className="text-3xl font-bold">${total.toFixed(2)}</span>
+                            <span className="text-3xl font-bold">Rs. {total.toFixed(2)}</span>
                         </div>
                         <Separator className="my-3" />
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <span className="text-sm text-gray-600 dark:text-gray-400">Total Paid</span>
                                 <div className="text-xl font-semibold text-green-600 dark:text-green-400">
-                                    ${totalPaid.toFixed(2)}
+                                    Rs. {totalPaid.toFixed(2)}
                                 </div>
                             </div>
                             <div>
@@ -130,10 +130,10 @@ export default function PaymentDialog({
                                     {remaining > 0 ? 'Remaining' : 'Change Due'}
                                 </span>
                                 <div className={`text-xl font-semibold ${remaining > 0
-                                        ? 'text-orange-600 dark:text-orange-400'
-                                        : 'text-blue-600 dark:text-blue-400'
+                                    ? 'text-orange-600 dark:text-orange-400'
+                                    : 'text-blue-600 dark:text-blue-400'
                                     }`}>
-                                    ${remaining > 0 ? remaining.toFixed(2) : changeDue.toFixed(2)}
+                                    Rs. {remaining > 0 ? remaining.toFixed(2) : changeDue.toFixed(2)}
                                 </div>
                             </div>
                         </div>
@@ -199,7 +199,7 @@ export default function PaymentDialog({
                                         size="sm"
                                         onClick={() => handleTenderAmount(amount)}
                                     >
-                                        ${amount}
+                                        Rs. {amount}
                                     </Button>
                                 ))}
                                 <Button
@@ -235,7 +235,7 @@ export default function PaymentDialog({
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium">
-                                                    ${payment.payment_amount.toFixed(2)}
+                                                    Rs. {payment.payment_amount.toFixed(2)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Button
@@ -265,7 +265,7 @@ export default function PaymentDialog({
                         className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:opacity-90"
                         size="lg"
                     >
-                        Complete Sale {changeDue > 0 && `(Change: $${changeDue.toFixed(2)})`}
+                        Complete Sale {changeDue > 0 && `(Change: Rs. ${changeDue.toFixed(2)})`}
                     </Button>
                 </DialogFooter>
             </DialogContent>
