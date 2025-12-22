@@ -276,7 +276,7 @@ export default function SalesPage() {
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>${item.price.toFixed(2)}</TableCell>
+                                                <TableCell>Rs. {item.price.toFixed(2)}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Button
@@ -297,7 +297,7 @@ export default function SalesPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium">
-                                                    ${finalTotal.toFixed(2)}
+                                                    Rs. {finalTotal.toFixed(2)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Button
@@ -353,16 +353,16 @@ export default function SalesPage() {
                     <CardContent className="space-y-3">
                         <div className="flex justify-between">
                             <span className="text-gray-600">Subtotal</span>
-                            <span className="font-medium">${getSubtotal().toFixed(2)}</span>
+                            <span className="font-medium">Rs. {getSubtotal().toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Tax (10%)</span>
-                            <span className="font-medium">${getTax().toFixed(2)}</span>
+                            <span className="font-medium">Rs. {getTax().toFixed(2)}</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between text-lg">
                             <span className="font-semibold">Total</span>
-                            <span className="font-bold">${getTotal().toFixed(2)}</span>
+                            <span className="font-bold">Rs. {getTotal().toFixed(2)}</span>
                         </div>
                     </CardContent>
                 </Card>
