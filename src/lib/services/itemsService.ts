@@ -181,11 +181,7 @@ export async function getItems(tenantId: string, filters?: ItemFilters): Promise
             .from('items')
             .select(`
                 *,
-                supplier:suppliers(*),
-                inventory(
-                    quantity,
-                    location:stock_locations(*)
-                )
+                supplier:suppliers(*)
             `)
             .eq('tenant_id', tenantId)
             .eq('deleted', false)
@@ -208,17 +204,23 @@ export async function getItems(tenantId: string, filters?: ItemFilters): Promise
 
         if (error) throw error
 
-        // Calculate total stock for each item
-        const itemsWithStock = (data || []).map(item => {
-            const totalStock = item.inventory?.reduce((sum: number, q: any) => sum + q.quantity, 0) || 0
+        // Fetch inventory data separately for each item
+        const itemsWithStock = await Promise.all((data || []).map(async (item) => {
+            const { data: inventoryData } = await supabase
+                .from('inventory')
+                .select('quantity, location_id, stock_locations(location_name)')
+                .eq('item_id', item.id)
+
+            const totalStock = inventoryData?.reduce((sum: number, inv: any) => sum + inv.quantity, 0) || 0
             const isLowStock = totalStock <= (item.reorder_level || 0)
 
             return {
                 ...item,
+                inventory: inventoryData || [],
                 stock_quantity: totalStock,
                 is_low_stock: isLowStock,
             }
-        })
+        }))
 
         // Filter by low stock if requested
         if (filters?.low_stock) {
@@ -243,22 +245,25 @@ export async function getItemById(itemId: number): Promise<any> {
             .from('items')
             .select(`
                 *,
-                supplier:suppliers(*),
-                inventory(
-                    quantity,
-                    location:stock_locations(*)
-                )
+                supplier:suppliers(*)
             `)
             .eq('id', itemId)
             .single()
 
         if (error) throw error
 
+        // Fetch inventory data separately
+        const { data: inventoryData } = await supabase
+            .from('inventory')
+            .select('quantity, location_id, stock_locations(location_name)')
+            .eq('item_id', itemId)
+
         // Calculate total stock
-        const totalStock = data.inventory?.reduce((sum: number, q: any) => sum + q.quantity, 0) || 0
+        const totalStock = inventoryData?.reduce((sum: number, inv: any) => sum + inv.quantity, 0) || 0
 
         return {
             ...data,
+            inventory: inventoryData || [],
             stock_quantity: totalStock,
             is_low_stock: totalStock <= (data.reorder_level || 0),
         }
