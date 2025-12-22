@@ -17,6 +17,18 @@ export async function completeSale(
         // Generate unique invoice number
         const invoiceNumber = await ensureUniqueInvoiceNumber(tenantId)
 
+        // Calculate totals
+        const subtotal = cart.items.reduce((sum, item) => {
+            const itemTotal = item.price * item.quantity
+            const discount = item.discount_type === 'percent'
+                ? itemTotal * (item.discount / 100)
+                : item.discount
+            return sum + (itemTotal - discount)
+        }, 0)
+
+        const tax = subtotal * 0.10 // 10% tax
+        const total = subtotal + tax
+
         // Create sale record
         const { data: sale, error: saleError } = await supabase
             .from('sales')
@@ -26,8 +38,9 @@ export async function completeSale(
                 employee_id: employeeId,
                 comment: cart.comment || '',
                 invoice_number: invoiceNumber,
-                sale_type: cart.mode,
-                status: 'completed',
+                sale_status: 'completed',
+                sale_total: total,
+                tax: tax,
                 sale_time: new Date().toISOString(),
             })
             .select()
@@ -46,7 +59,6 @@ export async function completeSale(
             item_cost_price: item.cost_price,
             item_unit_price: item.price,
             discount_percent: item.discount_type === 'percent' ? item.discount : 0,
-            item_location: item.item_location,
         }))
 
         const { error: itemsError } = await supabase
@@ -70,32 +82,38 @@ export async function completeSale(
 
         // Update inventory quantities
         for (const item of cart.items) {
-            // Decrement stock
-            const { error: qtyError } = await supabase.rpc('update_item_quantity', {
-                p_item_id: item.item_id,
-                p_location_id: item.item_location,
-                p_quantity_change: -item.quantity,
-            })
+            // Get current inventory
+            const { data: currentInv } = await supabase
+                .from('inventory')
+                .select('quantity')
+                .eq('item_id', item.item_id)
+                .eq('location_id', item.item_location)
+                .single()
 
-            if (qtyError) {
-                console.error('Error updating inventory:', qtyError)
-                // Continue even if inventory update fails
+            if (currentInv) {
+                // Update inventory
+                const { error: invError } = await supabase
+                    .from('inventory')
+                    .update({ quantity: currentInv.quantity - item.quantity })
+                    .eq('item_id', item.item_id)
+                    .eq('location_id', item.item_location)
+
+                if (invError) {
+                    console.error('Error updating inventory:', invError)
+                }
             }
 
             // Create inventory transaction for audit
-            const { data: { user } } = await supabase.auth.getUser()
-
-            if (user) {
-                await supabase.from('inventory_transactions').insert({
-                    tenant_id: tenantId,
-                    item_id: item.item_id,
-                    user_id: user.id,
-                    comment: `Sale #${invoiceNumber}`,
-                    location_id: item.item_location,
-                    quantity_change: -item.quantity,
-                    trans_date: new Date().toISOString(),
-                })
-            }
+            await supabase.from('inventory_transactions').insert({
+                item_id: item.item_id,
+                location_id: item.item_location,
+                quantity: -item.quantity,
+                transaction_type: 'sale',
+                reference_id: sale.id,
+                reference_type: 'sale',
+                employee_id: employeeId,
+                comment: `Sale #${invoiceNumber}`,
+            })
         }
 
         return sale as Sale
@@ -116,6 +134,18 @@ export async function suspendSale(
     const supabase = createClient()
 
     try {
+        // Calculate totals
+        const subtotal = cart.items.reduce((sum, item) => {
+            const itemTotal = item.price * item.quantity
+            const discount = item.discount_type === 'percent'
+                ? itemTotal * (item.discount / 100)
+                : item.discount
+            return sum + (itemTotal - discount)
+        }, 0)
+
+        const tax = subtotal * 0.10
+        const total = subtotal + tax
+
         // Create sale record with suspended status
         const { data: sale, error: saleError } = await supabase
             .from('sales')
@@ -124,8 +154,9 @@ export async function suspendSale(
                 customer_id: cart.customer?.id || null,
                 employee_id: employeeId,
                 comment: cart.comment || 'SUSPENDED',
-                sale_type: cart.mode,
-                status: 'suspended',
+                sale_status: 'suspended',
+                sale_total: total,
+                tax: tax,
                 sale_time: new Date().toISOString(),
             })
             .select()
@@ -144,7 +175,6 @@ export async function suspendSale(
             item_cost_price: item.cost_price,
             item_unit_price: item.price,
             discount_percent: item.discount_type === 'percent' ? item.discount : 0,
-            item_location: item.item_location,
         }))
 
         const { error: itemsError } = await supabase
@@ -175,7 +205,7 @@ export async function loadSuspendedSale(saleId: number): Promise<Cart | null> {
                 customer:customers (*)
             `)
             .eq('id', saleId)
-            .eq('status', 'suspended')
+            .eq('sale_status', 'suspended')
             .single()
 
         if (error) throw error
@@ -196,12 +226,12 @@ export async function loadSuspendedSale(saleId: number): Promise<Cart | null> {
                 serialnumber: item.serialnumber || '',
                 is_serialized: false,
                 allow_alt_description: false,
-                item_location: item.item_location,
+                item_location: 1,
             })),
             customer: sale.customer || undefined,
             payments: [],
             comment: sale.comment,
-            mode: sale.sale_type,
+            mode: 'sale',
         }
 
         return cart
@@ -221,7 +251,7 @@ export async function voidSale(saleId: number): Promise<void> {
         // Update sale status
         const { error } = await supabase
             .from('sales')
-            .update({ status: 'cancelled' })
+            .update({ sale_status: 'cancelled' })
             .eq('id', saleId)
 
         if (error) throw error
