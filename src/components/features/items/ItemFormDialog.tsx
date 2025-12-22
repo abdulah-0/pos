@@ -23,6 +23,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/toast'
 import { createItem, updateItem, getCategories, ItemInput } from '@/lib/services/itemsService'
+import { getStockLocations } from '@/lib/services/inventoryService'
 
 interface ItemFormDialogProps {
     open: boolean
@@ -41,8 +42,11 @@ export default function ItemFormDialog({
 }: ItemFormDialogProps) {
     const [loading, setLoading] = useState(false)
     const [categories, setCategories] = useState<string[]>([])
+    const [locations, setLocations] = useState<any[]>([])
     const [newCategory, setNewCategory] = useState('')
     const [showNewCategory, setShowNewCategory] = useState(false)
+    const [initialStock, setInitialStock] = useState(0)
+    const [selectedLocation, setSelectedLocation] = useState<number | null>(null)
     const { showToast } = useToast()
 
     const {
@@ -68,10 +72,11 @@ export default function ItemFormDialog({
 
     const selectedCategory = watch('category')
 
-    // Load categories
+    // Load categories and locations
     useEffect(() => {
         if (open && tenantId) {
             loadCategories()
+            loadLocations()
         }
     }, [open, tenantId])
 
@@ -113,6 +118,18 @@ export default function ItemFormDialog({
         }
     }
 
+    const loadLocations = async () => {
+        try {
+            const locs = await getStockLocations(tenantId)
+            setLocations(locs)
+            if (locs.length > 0 && !selectedLocation) {
+                setSelectedLocation(locs[0].id)
+            }
+        } catch (error) {
+            console.error('Error loading locations:', error)
+        }
+    }
+
     const handleAddCategory = () => {
         if (newCategory.trim()) {
             setCategories([...categories, newCategory.trim()])
@@ -130,8 +147,8 @@ export default function ItemFormDialog({
                 await updateItem(item.id, data)
                 showToast('success', 'Item updated successfully')
             } else {
-                // Create new item
-                await createItem(data, tenantId)
+                // Create new item with initial stock
+                await createItem(data, tenantId, initialStock, selectedLocation || undefined)
                 showToast('success', 'Item created successfully')
             }
             onSaved()
@@ -294,6 +311,50 @@ export default function ItemFormDialog({
                             Alert when stock falls below this level
                         </p>
                     </div>
+
+                    {/* Initial Stock (only for new items) */}
+                    {!item && (
+                        <>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="initial_stock">Initial Stock Quantity</Label>
+                                    <Input
+                                        id="initial_stock"
+                                        type="number"
+                                        value={initialStock}
+                                        onChange={(e) => setInitialStock(parseInt(e.target.value) || 0)}
+                                        min="0"
+                                        placeholder="0"
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                        Starting inventory quantity
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="location">Stock Location</Label>
+                                    <Select
+                                        value={selectedLocation?.toString()}
+                                        onValueChange={(value) => setSelectedLocation(parseInt(value))}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select location" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {locations.map((loc) => (
+                                                <SelectItem key={loc.id} value={loc.id.toString()}>
+                                                    {loc.location_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-500">
+                                        Where to store this item
+                                    </p>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {/* Options */}
                     <div className="space-y-3">

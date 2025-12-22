@@ -65,7 +65,12 @@ export async function generateItemNumber(tenantId: string): Promise<string> {
 /**
  * Create a new item
  */
-export async function createItem(item: ItemInput, tenantId: string): Promise<any> {
+export async function createItem(
+    item: ItemInput,
+    tenantId: string,
+    initialStock?: number,
+    locationId?: number
+): Promise<any> {
     const supabase = createClient()
 
     try {
@@ -101,6 +106,24 @@ export async function createItem(item: ItemInput, tenantId: string): Promise<any
             .single()
 
         if (error) throw error
+
+        // Create initial inventory record if stock quantity provided
+        if (data && initialStock && initialStock > 0 && locationId) {
+            const { error: invError } = await supabase
+                .from('inventory')
+                .insert({
+                    item_id: data.id,
+                    location_id: locationId,
+                    quantity: initialStock,
+                    tenant_id: tenantId,
+                })
+
+            if (invError) {
+                console.error('Error creating initial inventory:', invError)
+                // Don't throw - item was created successfully
+            }
+        }
+
         return data
     } catch (error) {
         console.error('Error creating item:', error)
