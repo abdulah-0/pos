@@ -175,3 +175,212 @@ export function formatDateTime(date: Date | string): string {
         minute: '2-digit',
     })
 }
+
+/**
+ * Export sales data to CSV format
+ */
+export function exportSalesToCSV(sales: any[], filename: string): void {
+    // CSV headers
+    const headers = [
+        'Invoice Number',
+        'Date',
+        'Customer',
+        'Items Count',
+        'Subtotal',
+        'Tax',
+        'Total',
+        'Status',
+        'Employee'
+    ]
+
+    // Convert sales to CSV rows
+    const rows = sales.map(sale => {
+        const customerName = sale.customer
+            ? `${sale.customer.person?.first_name || ''} ${sale.customer.person?.last_name || ''}`.trim()
+            : 'Walk-in'
+
+        const employeeName = sale.employee
+            ? `${sale.employee.person?.first_name || ''} ${sale.employee.person?.last_name || ''}`.trim()
+            : 'N/A'
+
+        const subtotal = sale.sale_total - (sale.tax || 0)
+
+        return [
+            sale.invoice_number || '',
+            new Date(sale.sale_time).toLocaleString(),
+            customerName,
+            sale.items?.length || 0,
+            subtotal.toFixed(2),
+            (sale.tax || 0).toFixed(2),
+            sale.sale_total.toFixed(2),
+            sale.sale_status || '',
+            employeeName
+        ]
+    })
+
+    // Combine headers and rows
+    const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${filename}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+}
+
+/**
+ * Export sales data to PDF format
+ */
+export function exportSalesToPDF(sales: any[], filename: string): void {
+    const totalSales = sales.reduce((sum, sale) => sum + sale.sale_total, 0)
+    const totalTax = sales.reduce((sum, sale) => sum + (sale.tax || 0), 0)
+    const totalSubtotal = totalSales - totalTax
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Sales Report</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    font-size: 12px;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #333;
+                    padding-bottom: 20px;
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                }
+                .header p {
+                    margin: 5px 0;
+                    color: #666;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                th {
+                    background-color: #f0f0f0;
+                    padding: 10px;
+                    text-align: left;
+                    border: 1px solid #ddd;
+                    font-weight: bold;
+                }
+                td {
+                    padding: 8px;
+                    border: 1px solid #ddd;
+                }
+                tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                }
+                .text-right {
+                    text-align: right;
+                }
+                .summary {
+                    margin-top: 30px;
+                    padding: 20px;
+                    background-color: #f0f0f0;
+                    border-radius: 5px;
+                }
+                .summary-row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 10px 0;
+                    font-size: 14px;
+                }
+                .summary-row.total {
+                    font-size: 18px;
+                    font-weight: bold;
+                    border-top: 2px solid #333;
+                    padding-top: 10px;
+                    margin-top: 10px;
+                }
+                @media print {
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <button class="no-print" onclick="window.print()" style="padding: 10px 20px; margin-bottom: 20px; cursor: pointer;">
+                🖨️ Print Report
+            </button>
+
+            <div class="header">
+                <h1>Sales Report</h1>
+                <p>Generated on ${new Date().toLocaleString()}</p>
+                <p>Total Sales: ${sales.length}</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th class="text-right">Items</th>
+                        <th class="text-right">Total</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sales.map(sale => {
+        const customerName = sale.customer
+            ? `${sale.customer.person?.first_name || ''} ${sale.customer.person?.last_name || ''}`.trim()
+            : 'Walk-in'
+
+        return `
+                            <tr>
+                                <td>${sale.invoice_number || 'N/A'}</td>
+                                <td>${new Date(sale.sale_time).toLocaleDateString()}</td>
+                                <td>${customerName}</td>
+                                <td class="text-right">${sale.items?.length || 0}</td>
+                                <td class="text-right">Rs. ${sale.sale_total.toFixed(2)}</td>
+                                <td>${sale.sale_status || 'N/A'}</td>
+                            </tr>
+                        `
+    }).join('')}
+                </tbody>
+            </table>
+
+            <div class="summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>Rs. ${totalSubtotal.toFixed(2)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax:</span>
+                    <span>Rs. ${totalTax.toFixed(2)}</span>
+                </div>
+                <div class="summary-row total">
+                    <span>TOTAL:</span>
+                    <span>Rs. ${totalSales.toFixed(2)}</span>
+                </div>
+            </div>
+        </body>
+        </html>
+    `
+
+    // Open in new window for printing/saving as PDF
+    const printWindow = window.open('', '_blank', 'width=800,height=600')
+    if (printWindow) {
+        printWindow.document.write(html)
+        printWindow.document.close()
+    }
+}

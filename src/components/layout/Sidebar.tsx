@@ -27,6 +27,7 @@ export function Sidebar({ tenantSlug }: SidebarProps) {
     const navigation = [
         { name: 'Dashboard', href: `${baseUrl}/dashboard`, icon: LayoutDashboard },
         { name: 'POS Register', href: `${baseUrl}/sales`, icon: ShoppingCart },
+        { name: 'Sales History', href: `${baseUrl}/sales-history`, icon: FileText },
         { name: 'Items', href: `${baseUrl}/items`, icon: Package },
         { name: 'Receiving', href: `${baseUrl}/receiving`, icon: Package2 },
         { name: 'Locations', href: `${baseUrl}/locations`, icon: MapPin },

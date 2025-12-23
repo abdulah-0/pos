@@ -262,3 +262,56 @@ export async function voidSale(saleId: number): Promise<void> {
         throw error
     }
 }
+
+/**
+ * Get all sales for a tenant
+ */
+export async function getSales(tenantId: string, filters?: {
+    status?: string
+    dateFrom?: string
+    dateTo?: string
+}): Promise<any[]> {
+    const supabase = createClient()
+
+    try {
+        let query = supabase
+            .from('sales')
+            .select(`
+                *,
+                customer:customers(
+                    *,
+                    person:people(*)
+                ),
+                items:sales_items(
+                    *,
+                    item:items(name)
+                ),
+                payments:sales_payments(*),
+                employee:employees(
+                    *,
+                    person:people(*)
+                )
+            `)
+            .eq('tenant_id', tenantId)
+            .order('sale_time', { ascending: false })
+
+        // Apply filters
+        if (filters?.status) {
+            query = query.eq('sale_status', filters.status)
+        }
+        if (filters?.dateFrom) {
+            query = query.gte('sale_time', filters.dateFrom)
+        }
+        if (filters?.dateTo) {
+            query = query.lte('sale_time', filters.dateTo)
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+        return data || []
+    } catch (error) {
+        console.error('Error fetching sales:', error)
+        throw error
+    }
+}
