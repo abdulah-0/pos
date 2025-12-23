@@ -245,9 +245,34 @@ export function generateReceiptHTML(sale: Sale, companyInfo: CompanyInfo): strin
 /**
  * Print receipt in a new window
  */
-export async function printReceipt(sale: Sale, tenantId: string): Promise<void> {
+export async function printReceipt(saleId: number, tenantId: string): Promise<void> {
+    const supabase = createClient()
+
+    // Fetch complete sale data
+    const { data: sale, error } = await supabase
+        .from('sales')
+        .select(`
+            *,
+            customer:customers(
+                *,
+                person:people(*)
+            ),
+            items:sales_items(
+                *,
+                item:items(name)
+            ),
+            payments:sales_payments(*)
+        `)
+        .eq('id', saleId)
+        .single()
+
+    if (error || !sale) {
+        console.error('Error fetching sale:', error)
+        throw new Error('Failed to fetch sale data')
+    }
+
     const companyInfo = await getCompanyInfo(tenantId)
-    const html = generateReceiptHTML(sale, companyInfo)
+    const html = generateReceiptHTML(sale as Sale, companyInfo)
 
     const printWindow = window.open('', '_blank', 'width=400,height=600')
     if (printWindow) {

@@ -76,11 +76,16 @@ export default function ItemSearchDialog({
 
                     const totalStock = inventoryData?.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0) || 0
                     const mainLocation = inventoryData?.[0]
+                    const locationName = mainLocation?.stock_locations
+                        ? (Array.isArray(mainLocation.stock_locations)
+                            ? mainLocation.stock_locations[0]?.location_name
+                            : mainLocation.stock_locations?.location_name)
+                        : 'No Location'
 
                     return {
                         ...item,
                         stock_quantity: totalStock,
-                        location_name: mainLocation?.stock_locations?.location_name || 'No Location',
+                        location_name: locationName,
                     }
                 })
             )
