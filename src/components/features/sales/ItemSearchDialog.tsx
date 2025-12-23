@@ -53,20 +53,11 @@ export default function ItemSearchDialog({
         setLoading(true)
         try {
             const supabase = createClient()
-            
+
             // Search items by name, item_number, or description
             const { data, error } = await supabase
                 .from('items')
-                .select(`
-                    *,
-                    inventory (
-                        quantity,
-                        location:stock_locations (
-                            id,
-                            location_name
-                        )
-                    )
-                `)
+                .select('*')
                 .eq('tenant_id', tenantId)
                 .eq('deleted', false)
                 .or(`name.ilike.%${query}%,item_number.ilike.%${query}%,description.ilike.%${query}%`)
@@ -74,18 +65,25 @@ export default function ItemSearchDialog({
 
             if (error) throw error
 
-            // Transform data to include stock info
-            const itemsWithStock: ItemWithStock[] = (data || []).map((item: any) => {
-                const quantities = item.inventory || []
-                const totalStock = quantities.reduce((sum: number, q: any) => sum + (q.quantity || 0), 0)
-                const mainLocation = quantities[0]
+            // Fetch inventory for each item separately
+            const itemsWithStock: ItemWithStock[] = await Promise.all(
+                (data || []).map(async (item: any) => {
+                    // Get inventory for this item
+                    const { data: inventoryData } = await supabase
+                        .from('inventory')
+                        .select('quantity, location_id, stock_locations(location_name)')
+                        .eq('item_id', item.id)
 
-                return {
-                    ...item,
-                    stock_quantity: totalStock,
-                    location_name: mainLocation?.location?.location_name || 'No Location',
-                }
-            })
+                    const totalStock = inventoryData?.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0) || 0
+                    const mainLocation = inventoryData?.[0]
+
+                    return {
+                        ...item,
+                        stock_quantity: totalStock,
+                        location_name: mainLocation?.stock_locations?.location_name || 'No Location',
+                    }
+                })
+            )
 
             setItems(itemsWithStock)
             setSelectedIndex(0)
@@ -195,11 +193,10 @@ export default function ItemSearchDialog({
                                         <TableRow
                                             key={item.id}
                                             onClick={() => handleSelectItem(item)}
-                                            className={`cursor-pointer transition-colors ${
-                                                index === selectedIndex
-                                                    ? 'bg-blue-50 dark:bg-blue-950'
-                                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                                            }`}
+                                            className={`cursor-pointer transition-colors ${index === selectedIndex
+                                                ? 'bg-blue-50 dark:bg-blue-950'
+                                                : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                                                }`}
                                         >
                                             <TableCell>
                                                 <div>
@@ -222,7 +219,7 @@ export default function ItemSearchDialog({
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right font-medium">
-                                                ${item.unit_price.toFixed(2)}
+                                                Rs. {item.unit_price.toFixed(2)}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Badge

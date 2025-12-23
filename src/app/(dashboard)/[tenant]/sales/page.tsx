@@ -166,9 +166,14 @@ export default function SalesPage() {
             clearCart()
             setShowPaymentDialog(false)
 
-            alert(`Sale completed successfully! Invoice #${sale.invoice_number}`)
-
-            // TODO: Generate and print receipt
+            // Generate and download receipt
+            try {
+                await printReceipt(sale.id, tenantId)
+                showToast('success', `Sale completed! Invoice #${sale.invoice_number}. Receipt downloaded.`)
+            } catch (receiptError) {
+                console.error('Error generating receipt:', receiptError)
+                showToast('success', `Sale completed! Invoice #${sale.invoice_number}`)
+            }
         } catch (error) {
             console.error('Error completing sale:', error)
             showToast('error', 'Error completing sale. Please try again.')
