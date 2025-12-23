@@ -14,6 +14,7 @@ import {
     MapPin,
     Package2,
     Award,
+    FileText,
 } from 'lucide-react'
 
 interface SidebarProps {
